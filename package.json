@@ -20,5 +20,8 @@
     "@nomiclabs/hardhat-waffle": {
       "@nomiclabs/hardhat-ethers": "$@nomiclabs/hardhat-ethers"
     }
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.7.3"
   }
 }
