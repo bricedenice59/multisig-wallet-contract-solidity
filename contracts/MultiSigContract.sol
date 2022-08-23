@@ -3,27 +3,27 @@ pragma solidity ^0.8.14;
 
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-error MultiSigMarketplace__OnlyOwner();
-error MultiSigMarketplace__CtorNotEnoughOwners();
-error MultiSigMarketplace__CtorTooManyOwners();
-error MultiSigMarketplace__OwnerInvalidAddress();
-error MultiSigMarketplace__CtorListOfOwnersHasDuplicatedAddresses();
-error MultiSigMarketplace__TxAlreadyExecuted();
-error MultiSigMarketplace__TxDoesNotExist();
-error MultiSigMarketplace__TxAlreadyConfirmed();
-error MultiSigMarketplace__TxCannotExecute();
-error MultiSigMarketplace__TxExecuteFailed();
-error MultiSigMarketplace__TxAlreadySubmitted();
-error MultiSigMarketplace__AddOwnerFailed();
-error MultiSigMarketplace__RemoveOwnerFailed();
+error MultiSig__OnlyOwner();
+error MultiSig__CtorNotEnoughOwners();
+error MultiSig__CtorTooManyOwners();
+error MultiSig__OwnerInvalidAddress();
+error MultiSig__CtorListOfOwnersHasDuplicatedAddresses();
+error MultiSig__TxAlreadyExecuted();
+error MultiSig__TxDoesNotExist();
+error MultiSig__TxAlreadyConfirmed();
+error MultiSig__TxCannotExecute();
+error MultiSig__TxExecuteFailed();
+error MultiSig__TxAlreadySubmitted();
+error MultiSig__AddOwnerFailed();
+error MultiSig__RemoveOwnerFailed();
 
 /** @title A multisignature wallet contract
  *  @author Brice Grenard
  *  @notice This contract is a mutlisig wallet that is being used for the marketplace contract I have been working on.
- *  It allows any contract's owner to make a proposal and anyone including the proposal's author is welcomed to confirm it.
+ *  It allows any contract's owner to make a proposal. Anyone including the proposal's author is welcomed to confirm it.
  *  If a proposal has gained enough confirmation, the transaction can be executed.
  */
-contract MultiSigMarketplace {
+contract MultiSig {
     using SafeMath for uint256;
 
     /* events */
@@ -45,7 +45,7 @@ contract MultiSigMarketplace {
     uint8 immutable i_minimumOwnersCount = 3;
     uint8 immutable i_maximumOwnersCount = 20;
     //80% of owners required to approve a transaction, in this contract approve fct is executeTx()
-    uint8 immutable i_percentageOwnersNeededForApproval = 80;
+    uint8 immutable i_percentageOwnersRequiredForApproval = 80;
 
     //array of owner addresses stored in contract
     address[] private s_owners;
@@ -84,7 +84,7 @@ contract MultiSigMarketplace {
      * Allows only owners registered into this contract to use functions decorated with this modifier
      */
     modifier onlyOwner() {
-        if (!s_isOwner[msg.sender]) revert MultiSigMarketplace__OnlyOwner();
+        if (!s_isOwner[msg.sender]) revert MultiSig__OnlyOwner();
         _;
     }
 
@@ -94,7 +94,7 @@ contract MultiSigMarketplace {
      */
     modifier txExists(uint256 nonce) {
         if (s_transactions[nonce].to == address(0))
-            revert MultiSigMarketplace__TxDoesNotExist();
+            revert MultiSig__TxDoesNotExist();
         _;
     }
 
@@ -104,7 +104,7 @@ contract MultiSigMarketplace {
      */
     modifier txNotExecuted(uint256 nonce) {
         if (s_transactions[nonce].executed)
-            revert MultiSigMarketplace__TxAlreadyExecuted();
+            revert MultiSig__TxAlreadyExecuted();
         _;
     }
 
@@ -114,35 +114,34 @@ contract MultiSigMarketplace {
      */
     modifier txNotConfirmed(uint256 nonce) {
         if (hasConfirmed[nonce][msg.sender])
-            revert MultiSigMarketplace__TxAlreadyConfirmed();
+            revert MultiSig__TxAlreadyConfirmed();
         _;
     }
 
     // Constructor
     /**
-     * Initialize the contract with a pre-defined list of owners
+     * Initializes the contract with a pre-defined list of owners
      * Calculate the number of owners required to execute a transaction
      */
     constructor(address[] memory listOfOwners) {
         if (listOfOwners.length < i_minimumOwnersCount)
-            revert MultiSigMarketplace__CtorNotEnoughOwners();
+            revert MultiSig__CtorNotEnoughOwners();
         if (listOfOwners.length > i_maximumOwnersCount)
-            revert MultiSigMarketplace__CtorTooManyOwners();
+            revert MultiSig__CtorTooManyOwners();
 
         for (uint8 i = 0; i < listOfOwners.length; i++) {
             address owner = listOfOwners[i];
-            if (owner == address(0))
-                revert MultiSigMarketplace__OwnerInvalidAddress();
+            if (owner == address(0)) revert MultiSig__OwnerInvalidAddress();
             if (s_isOwner[owner])
-                revert MultiSigMarketplace__CtorListOfOwnersHasDuplicatedAddresses();
+                revert MultiSig__CtorListOfOwnersHasDuplicatedAddresses();
             s_isOwner[owner] = true;
         }
         s_owners = listOfOwners;
-        s_nbOwnerConfirmationsNeededForApproval = getNumberOfAdminsNeededForApproval();
+        s_nbOwnerConfirmationsNeededForApproval = getNumberOfAdminsRequiredForApproval();
     }
 
     /**
-     * Submit a proposal (transaction)
+     * Submits a proposal (transaction)
      * The proposal is for this use case a contract function call passed into the _data parameter
      * I may later use the value for funds withdrawal proposal
      */
@@ -154,7 +153,7 @@ contract MultiSigMarketplace {
     ) external onlyOwner {
         //only one submission per nonce value
         if (s_transactions[_nonce].to != address(0))
-            revert MultiSigMarketplace__TxAlreadySubmitted();
+            revert MultiSig__TxAlreadySubmitted();
 
         s_transactions[_nonce] = Tx({
             to: _to,
@@ -168,7 +167,7 @@ contract MultiSigMarketplace {
     }
 
     /**
-     * Confirm a proposal (transaction)
+     * Confirms a proposal (transaction)
      * Every owner stored in this contract may confirm the proposal
      */
     function confirmTx(uint256 _nonce)
@@ -186,7 +185,7 @@ contract MultiSigMarketplace {
     }
 
     /**
-     * Execute a proposal (transaction) if enough owners confirmed it.
+     * Executes a proposal (transaction) if enough owners confirmed it.
      * Any owner stored in this contract may confirm the proposal, even if one has not confirmed it.
      */
     function executeTx(uint256 _nonce)
@@ -195,53 +194,51 @@ contract MultiSigMarketplace {
         txExists(_nonce)
         txNotExecuted(_nonce)
     {
-        uint256 numberOfApprovalsNeeded = getNumberOfAdminsNeededForApproval();
+        uint256 numberOfApprovalsNeeded = getNumberOfAdminsRequiredForApproval();
         Tx storage transaction = s_transactions[_nonce];
         if (transaction.nbOwnerConfirmationsProcessed < numberOfApprovalsNeeded)
-            revert MultiSigMarketplace__TxCannotExecute();
+            revert MultiSig__TxCannotExecute();
         transaction.executed = true;
         (bool success, ) = transaction.to.call{value: transaction.value}(
             transaction.data
         );
-        if (!success) revert MultiSigMarketplace__TxExecuteFailed();
+        if (!success) revert MultiSig__TxExecuteFailed();
         emit TxExecuted(msg.sender, _nonce);
     }
 
     /**
-     * Add a new owner to this contract.
+     * Adds a new owner to this contract.
      * A single owner from this contract cannot add a new owner, he/her must send a proposal.
      */
     function addOwner(address newOwner) external onlyThisWallet {
-        if (newOwner == address(0))
-            revert MultiSigMarketplace__OwnerInvalidAddress();
+        if (newOwner == address(0)) revert MultiSig__OwnerInvalidAddress();
         if (s_owners.length == type(uint8).max)
-            revert MultiSigMarketplace__AddOwnerFailed();
-        if (s_isOwner[newOwner]) revert MultiSigMarketplace__AddOwnerFailed();
+            revert MultiSig__AddOwnerFailed();
+        if (s_isOwner[newOwner]) revert MultiSig__AddOwnerFailed();
 
         s_owners.push(newOwner);
 
         //update number of approvals needed for executing a transaction
-        s_nbOwnerConfirmationsNeededForApproval = getNumberOfAdminsNeededForApproval();
+        s_nbOwnerConfirmationsNeededForApproval = getNumberOfAdminsRequiredForApproval();
 
         emit MultiSigOwnerAdded(newOwner, block.timestamp);
     }
 
     /**
-     * Remove an exising owner from this contract.
+     * Removes an exising owner from this contract.
      * A single owner from this contract cannot remove an existing owner, he/her must send a proposal.
      */
     function removeOwner(address owner) external onlyThisWallet {
-        if (owner == address(0))
-            revert MultiSigMarketplace__OwnerInvalidAddress();
+        if (owner == address(0)) revert MultiSig__OwnerInvalidAddress();
         if (s_owners.length == i_minimumOwnersCount)
-            revert MultiSigMarketplace__RemoveOwnerFailed();
+            revert MultiSig__RemoveOwnerFailed();
 
         uint256 index = ownersArrayIndexOf(owner);
         ownersArrayRemoveAtIndex(index);
         s_isOwner[owner] = false;
 
         //update number of approvals needed for executing a transaction
-        s_nbOwnerConfirmationsNeededForApproval = getNumberOfAdminsNeededForApproval();
+        s_nbOwnerConfirmationsNeededForApproval = getNumberOfAdminsRequiredForApproval();
 
         emit MultiSigOwnerRemoved(owner, block.timestamp);
     }
@@ -249,25 +246,25 @@ contract MultiSigMarketplace {
     /**
      * Get immutable percentage variable of owners required for a transaction execution.
      */
-    function getPercentageOfOwnersNeededForApproval()
+    function getPercentageOfOwnersRequiredForApproval()
         external
         pure
         returns (uint8 nbAdminsNeeded)
     {
-        nbAdminsNeeded = i_percentageOwnersNeededForApproval;
+        nbAdminsNeeded = i_percentageOwnersRequiredForApproval;
     }
 
     /**
      * Get a calculated value representing a number of owners required for a transaction execution.
      */
-    function getNumberOfAdminsNeededForApproval()
+    function getNumberOfAdminsRequiredForApproval()
         public
         view
         returns (uint256 nbAdminsNeeded)
     {
         uint256 nbOwnersCalculatedPercentage = s_owners
             .length
-            .mul(i_percentageOwnersNeededForApproval)
+            .mul(i_percentageOwnersRequiredForApproval)
             .div(100);
         nbAdminsNeeded = nbOwnersCalculatedPercentage;
     }
@@ -286,7 +283,7 @@ contract MultiSigMarketplace {
     /**
      * Returns the index of a given address in the owners array
      */
-    function ownersArrayIndexOf(address value) public view returns (uint256) {
+    function ownersArrayIndexOf(address value) private view returns (uint256) {
         uint i = 0;
         while (s_owners[i] != value) {
             i++;
@@ -295,14 +292,21 @@ contract MultiSigMarketplace {
     }
 
     /**
-     * Remove a value from the owners array
+     * Removes a value from the owners array
      */
-    function ownersArrayRemoveAtIndex(uint _index) public {
+    function ownersArrayRemoveAtIndex(uint _index) private {
         require(_index < s_owners.length, "index out of bound");
 
         for (uint i = _index; i < s_owners.length - 1; i++) {
             s_owners[i] = s_owners[i + 1];
         }
         s_owners.pop();
+    }
+
+    /**
+     * Gets a transaction object for a given nonce
+     */
+    function getTransaction(uint256 nonce) external view returns (Tx memory) {
+        return s_transactions[nonce];
     }
 }
