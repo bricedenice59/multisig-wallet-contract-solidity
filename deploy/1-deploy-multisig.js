@@ -25,7 +25,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   if (chainId != 31337 && process.env.ETHERSCAN_API_KEY) {
     log("Verifing contract on Etherscan!");
     log("----------------------");
-    await verify(deploymentResult.address, args);
+    await verify(deploymentResult.address, [args]);
     log("--------Verify Done--------------");
   }
 
