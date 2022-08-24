@@ -71,13 +71,5 @@ contract Demo {
         user = s_users[_address];
     }
 
-    function getPayloadData(string memory _function, address user)
-        external
-        pure
-        returns (bytes memory)
-    {
-        return abi.encodeWithSignature(_function, user);
-    }
-
     fallback() external {}
 }

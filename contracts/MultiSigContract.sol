@@ -56,7 +56,7 @@ contract MultiSig {
     //for a given transaction nonce, track if a owner address has confirmed a transaction
     mapping(uint256 => mapping(address => bool)) hasConfirmed;
     //calculated number of owners required to execute a transaction
-    uint256 private s_nbOwnerConfirmationsNeededForApproval;
+    uint256 private s_nbOwnerConfirmationsRequiredForApproval;
 
     //A transaction object
     struct Tx {
@@ -137,7 +137,7 @@ contract MultiSig {
             s_isOwner[owner] = true;
         }
         s_owners = listOfOwners;
-        s_nbOwnerConfirmationsNeededForApproval = getNumberOfAdminsRequiredForApproval();
+        s_nbOwnerConfirmationsRequiredForApproval = calculateNumberOfOwnersRequiredForApproval();
     }
 
     /**
@@ -194,7 +194,7 @@ contract MultiSig {
         txExists(_nonce)
         txNotExecuted(_nonce)
     {
-        uint256 numberOfApprovalsNeeded = getNumberOfAdminsRequiredForApproval();
+        uint256 numberOfApprovalsNeeded = calculateNumberOfOwnersRequiredForApproval();
         Tx storage transaction = s_transactions[_nonce];
         if (transaction.nbOwnerConfirmationsProcessed < numberOfApprovalsNeeded)
             revert MultiSig__TxCannotExecute();
@@ -212,14 +212,15 @@ contract MultiSig {
      */
     function addOwner(address newOwner) external onlyThisWallet {
         if (newOwner == address(0)) revert MultiSig__OwnerInvalidAddress();
-        if (s_owners.length == type(uint8).max)
+        if (s_owners.length == i_maximumOwnersCount)
             revert MultiSig__AddOwnerFailed();
         if (s_isOwner[newOwner]) revert MultiSig__AddOwnerFailed();
 
         s_owners.push(newOwner);
+        s_isOwner[newOwner] = true;
 
         //update number of approvals needed for executing a transaction
-        s_nbOwnerConfirmationsNeededForApproval = getNumberOfAdminsRequiredForApproval();
+        s_nbOwnerConfirmationsRequiredForApproval = calculateNumberOfOwnersRequiredForApproval();
 
         emit MultiSigOwnerAdded(newOwner, block.timestamp);
     }
@@ -238,7 +239,7 @@ contract MultiSig {
         s_isOwner[owner] = false;
 
         //update number of approvals needed for executing a transaction
-        s_nbOwnerConfirmationsNeededForApproval = getNumberOfAdminsRequiredForApproval();
+        s_nbOwnerConfirmationsRequiredForApproval = calculateNumberOfOwnersRequiredForApproval();
 
         emit MultiSigOwnerRemoved(owner, block.timestamp);
     }
@@ -249,35 +250,41 @@ contract MultiSig {
     function getPercentageOfOwnersRequiredForApproval()
         external
         pure
-        returns (uint8 nbAdminsNeeded)
+        returns (uint8 nbOwnersRequired)
     {
-        nbAdminsNeeded = i_percentageOwnersRequiredForApproval;
+        nbOwnersRequired = i_percentageOwnersRequiredForApproval;
     }
 
     /**
-     * Get a calculated value representing a number of owners required for a transaction execution.
+     * Retrieves the number of owners required for a transaction execution.
      */
-    function getNumberOfAdminsRequiredForApproval()
-        public
+    function getNumberOfOwnersRequiredForApproval()
+        external
         view
-        returns (uint256 nbAdminsNeeded)
+        returns (uint256 nbOwnersRequired)
     {
-        uint256 nbOwnersCalculatedPercentage = s_owners
+        nbOwnersRequired = s_nbOwnerConfirmationsRequiredForApproval;
+    }
+
+    /**
+     * Calculates the number of owners required for a transaction execution.
+     */
+    function calculateNumberOfOwnersRequiredForApproval()
+        private
+        view
+        returns (uint256 nbOwnersRequired)
+    {
+        nbOwnersRequired = s_owners
             .length
             .mul(i_percentageOwnersRequiredForApproval)
             .div(100);
-        nbAdminsNeeded = nbOwnersCalculatedPercentage;
     }
 
     /**
      * Returns a list of all owners stored in this contract.
      */
-    function getOwnersAddresses()
-        external
-        view
-        returns (address[] memory owners)
-    {
-        owners = s_owners;
+    function getOwnersAddresses() external view returns (address[] memory) {
+        return s_owners;
     }
 
     /**
