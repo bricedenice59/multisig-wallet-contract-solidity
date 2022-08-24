@@ -9,8 +9,9 @@ require("hardhat-deploy");
 dotenvExpand.expand(config);
 
 const DEPLOYER_ACCOUNT = process.env.CONTRACT_DEPLOYER_PRIVATE_KEY;
-const ADMIN1_ACCOUNT = process.env.ADMIN1_PRIVATE_KEY;
-const ADMIN2_ACCOUNT = process.env.ADMIN2_PRIVATE_KEY;
+const OWNER1_ACCOUNT = process.env.OWNER1_PRIVATE_KEY;
+const OWNER2_ACCOUNT = process.env.OWNER2_PRIVATE_KEY;
+const OWNER3_ACCOUNT = process.env.OWNER3_PRIVATE_KEY;
 
 const GOERLI_RPC_URL = process.env.GOERLI_RPC_URL;
 const RINKEBY_RPC_URL = process.env.RINKEBY_RPC_URL;
@@ -33,7 +34,12 @@ module.exports = {
     },
     rinkeby: {
       url: RINKEBY_RPC_URL,
-      accounts: [DEPLOYER_ACCOUNT, ADMIN1_ACCOUNT, ADMIN2_ACCOUNT],
+      accounts: [
+        DEPLOYER_ACCOUNT,
+        OWNER1_ACCOUNT,
+        OWNER2_ACCOUNT,
+        OWNER3_ACCOUNT,
+      ],
       chainId: 4,
       blockConfirmationsForTransactions: 2,
       blockConfirmationsForContractVerification: 6,
@@ -43,7 +49,12 @@ module.exports = {
     },
     goerli: {
       url: GOERLI_RPC_URL,
-      accounts: [DEPLOYER_ACCOUNT, ADMIN1_ACCOUNT, ADMIN2_ACCOUNT],
+      accounts: [
+        DEPLOYER_ACCOUNT,
+        OWNER1_ACCOUNT,
+        OWNER2_ACCOUNT,
+        OWNER3_ACCOUNT,
+      ],
       chainId: 5,
       blockConfirmationsForTransactions: 2,
       blockConfirmationsForContractVerification: 6,
@@ -67,11 +78,14 @@ module.exports = {
     deployer: {
       default: 0,
     },
-    admin1: {
+    owner1: {
       default: 1,
     },
-    admin2: {
+    owner2: {
       default: 2,
+    },
+    owner3: {
+      default: 3,
     },
   },
   mocha: {

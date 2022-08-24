@@ -1,9 +1,3 @@
-//Goal of this test is to ensure that a user from the demo contract
-//can only be blacklisted if a consensus to do so is reached
-//The deployer of the demo contract is not allowed to change any user blacklisted state
-//Multiple owners must confirm the transaction in order to be executed.
-//Execution will change the state of the user structure boolean isBlacklisted from false to true
-
 const { assert, expect } = require("chai");
 const { ethers } = require("hardhat");
 const {
