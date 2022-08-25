@@ -34,8 +34,16 @@ contract MultiSig {
         uint256 value,
         bytes data
     );
-    event TxConfirmed(address indexed owner, uint256 indexed nonce);
-    event TxExecuted(address indexed owner, uint indexed nonce);
+    event TxConfirmed(
+        address indexed owner,
+        address indexed txOriginOwner,
+        uint256 indexed nonce
+    );
+    event TxExecuted(
+        address indexed owner,
+        address indexed txOriginOwner,
+        uint indexed nonce
+    );
     event MultiSigOwnerAdded(address indexed owner, uint256 indexed timestamp);
     event MultiSigOwnerRemoved(
         address indexed owner,
@@ -60,6 +68,7 @@ contract MultiSig {
 
     //A transaction object
     struct Tx {
+        address from;
         address to;
         uint256 nonce;
         uint256 value;
@@ -156,6 +165,7 @@ contract MultiSig {
             revert MultiSig__TxAlreadySubmitted();
 
         s_transactions[_nonce] = Tx({
+            from: msg.sender,
             to: _to,
             nonce: _nonce,
             value: _value,
@@ -181,7 +191,7 @@ contract MultiSig {
         transaction.nbOwnerConfirmationsProcessed += 1;
         hasConfirmed[_nonce][msg.sender] = true;
 
-        emit TxConfirmed(msg.sender, _nonce);
+        emit TxConfirmed(msg.sender, transaction.from, _nonce);
     }
 
     /**
@@ -203,7 +213,7 @@ contract MultiSig {
             transaction.data
         );
         if (!success) revert MultiSig__TxExecuteFailed();
-        emit TxExecuted(msg.sender, _nonce);
+        emit TxExecuted(msg.sender, transaction.from, _nonce);
     }
 
     /**

@@ -186,7 +186,7 @@ describe("Multisig contract deployment test", function () {
           .confirmTx(argsTxSubmitted._nonce)
       )
         .to.emit(deployedMultiSigContract, "TxConfirmed")
-        .withArgs(owner2.address, argsTxSubmitted._nonce);
+        .withArgs(owner2.address, owner2.address, argsTxSubmitted._nonce);
 
       //test if tx has been successfully confirmed
       const tx = await deployedMultiSigContract.getTransaction(
@@ -221,7 +221,7 @@ describe("Multisig contract deployment test", function () {
           .confirmTx(argsTxSubmitted._nonce)
       )
         .to.emit(deployedMultiSigContract, "TxConfirmed")
-        .withArgs(owner1.address, argsTxSubmitted._nonce);
+        .withArgs(owner1.address, owner2.address, argsTxSubmitted._nonce);
 
       //test if tx has been successfully confirmed
       const tx = await deployedMultiSigContract.getTransaction(
@@ -245,7 +245,7 @@ describe("Multisig contract deployment test", function () {
           .executeTx(argsTxSubmitted._nonce)
       )
         .to.emit(deployedMultiSigContract, "TxExecuted")
-        .withArgs(owner1.address, argsTxSubmitted._nonce);
+        .withArgs(owner1.address, owner2.address, argsTxSubmitted._nonce);
 
       //test if tx has been successfully executed
       const tx = await deployedMultiSigContract.getTransaction(
@@ -320,7 +320,7 @@ describe("Multisig contract deployment test", function () {
       var abiFragmentAddOwner = ["function addOwner(address newOwner)"];
       var iAddOwner = new ethers.utils.Interface(abiFragmentAddOwner);
       const payloadAddOwner = iAddOwner.encodeFunctionData("addOwner", [
-        user1.address,
+        "0x06Cfb38C30775505C934A1bA364bfFEDfbFAfE37",
       ]);
 
       //get last transaction nonce
@@ -366,7 +366,7 @@ describe("Multisig contract deployment test", function () {
           .confirmTx(argsTxSubmitted._nonce)
       )
         .to.emit(deployedMultiSigContract, "TxConfirmed")
-        .withArgs(owner2.address, argsTxSubmitted._nonce);
+        .withArgs(owner2.address, owner2.address, argsTxSubmitted._nonce);
 
       //owner3 confirms tx
       await expect(
@@ -375,7 +375,7 @@ describe("Multisig contract deployment test", function () {
           .confirmTx(argsTxSubmitted._nonce)
       )
         .to.emit(deployedMultiSigContract, "TxConfirmed")
-        .withArgs(owner3.address, argsTxSubmitted._nonce);
+        .withArgs(owner3.address, owner2.address, argsTxSubmitted._nonce);
       //----------confirmation txs sent-----------
 
       //----------execute tx----------------
@@ -385,7 +385,7 @@ describe("Multisig contract deployment test", function () {
           .executeTx(argsTxSubmitted._nonce)
       )
         .to.emit(deployedMultiSigContract, "TxExecuted")
-        .withArgs(owner3.address, argsTxSubmitted._nonce);
+        .withArgs(owner3.address, owner2.address, argsTxSubmitted._nonce);
       //----------execute tx sent-----------
 
       //Retrieves all owners from the contract
