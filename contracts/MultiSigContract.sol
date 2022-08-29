@@ -50,10 +50,10 @@ contract MultiSig {
         uint256 indexed timestamp
     );
 
-    uint8 immutable i_minimumOwnersCount = 3;
-    uint8 immutable i_maximumOwnersCount = 20;
+    uint8 constant MINIMUM_OWNERS_COUNT = 3;
+    uint8 constant MAXIMUM_OWNERS_COUNT = 20;
     //80% of owners required to approve a transaction, in this contract approve fct is executeTx()
-    uint8 immutable i_percentageOwnersRequiredForApproval = 80;
+    uint8 constant PERCENTAGE_OWNERS_REQUIRED_FOR_APPROVAL = 80;
 
     //array of owner addresses stored in contract
     address[] private s_owners;
@@ -133,9 +133,9 @@ contract MultiSig {
      * Calculate the number of owners required to execute a transaction
      */
     constructor(address[] memory listOfOwners) {
-        if (listOfOwners.length < i_minimumOwnersCount)
+        if (listOfOwners.length < MINIMUM_OWNERS_COUNT)
             revert MultiSig__CtorNotEnoughOwners();
-        if (listOfOwners.length > i_maximumOwnersCount)
+        if (listOfOwners.length > MAXIMUM_OWNERS_COUNT)
             revert MultiSig__CtorTooManyOwners();
 
         for (uint8 i = 0; i < listOfOwners.length; i++) {
@@ -144,6 +144,8 @@ contract MultiSig {
             if (s_isOwner[owner])
                 revert MultiSig__CtorListOfOwnersHasDuplicatedAddresses();
             s_isOwner[owner] = true;
+
+            emit MultiSigOwnerAdded(owner, block.timestamp);
         }
         s_owners = listOfOwners;
         s_nbOwnerConfirmationsRequiredForApproval = calculateNumberOfOwnersRequiredForApproval();
@@ -222,7 +224,7 @@ contract MultiSig {
      */
     function addOwner(address newOwner) external onlyThisWallet {
         if (newOwner == address(0)) revert MultiSig__OwnerInvalidAddress();
-        if (s_owners.length == i_maximumOwnersCount)
+        if (s_owners.length == MAXIMUM_OWNERS_COUNT)
             revert MultiSig__AddOwnerFailed();
         if (s_isOwner[newOwner]) revert MultiSig__AddOwnerFailed();
 
@@ -241,7 +243,7 @@ contract MultiSig {
      */
     function removeOwner(address owner) external onlyThisWallet {
         if (owner == address(0)) revert MultiSig__OwnerInvalidAddress();
-        if (s_owners.length == i_minimumOwnersCount)
+        if (s_owners.length == MINIMUM_OWNERS_COUNT)
             revert MultiSig__RemoveOwnerFailed();
 
         uint256 index = ownersArrayIndexOf(owner);
@@ -262,7 +264,7 @@ contract MultiSig {
         pure
         returns (uint8 nbOwnersRequired)
     {
-        nbOwnersRequired = i_percentageOwnersRequiredForApproval;
+        nbOwnersRequired = PERCENTAGE_OWNERS_REQUIRED_FOR_APPROVAL;
     }
 
     /**
@@ -286,7 +288,7 @@ contract MultiSig {
     {
         nbOwnersRequired = s_owners
             .length
-            .mul(i_percentageOwnersRequiredForApproval)
+            .mul(PERCENTAGE_OWNERS_REQUIRED_FOR_APPROVAL)
             .div(100);
     }
 
