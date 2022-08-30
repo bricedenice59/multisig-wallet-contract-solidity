@@ -13,9 +13,9 @@ error MultiSig__TxDoesNotExist();
 error MultiSig__TxAlreadyConfirmed();
 error MultiSig__TxCannotExecute();
 error MultiSig__TxExecuteFailed();
-error MultiSig__TxAlreadySubmitted();
 error MultiSig__AddOwnerFailed();
 error MultiSig__RemoveOwnerFailed();
+error MultiSig__TxConcurrentCallsSubmit();
 
 /** @title A multisignature wallet contract
  *  @author Brice Grenard
@@ -76,6 +76,8 @@ contract MultiSig {
         bool executed;
         uint8 nbOwnerConfirmationsProcessed;
     }
+    //store all transactions nonce created by the submitTx function
+    uint256[] s_txNonce;
 
     // Modifier
     /**
@@ -158,14 +160,13 @@ contract MultiSig {
      */
     function submitTx(
         address _to,
-        uint256 _nonce,
         uint256 _value,
         bytes calldata _data
     ) external onlyOwner {
-        //only one submission per nonce value
-        if (s_transactions[_nonce].to != address(0))
-            revert MultiSig__TxAlreadySubmitted();
+        uint256 _nonce = s_txNonce.length;
+        if (_nonce == 0) _nonce += 1;
 
+        s_txNonce.push(_nonce);
         s_transactions[_nonce] = Tx({
             from: msg.sender,
             to: _to,
@@ -320,6 +321,10 @@ contract MultiSig {
             s_owners[i] = s_owners[i + 1];
         }
         s_owners.pop();
+    }
+
+    function getTransactionCount() external view returns (uint256) {
+        return s_txNonce.length;
     }
 
     /**

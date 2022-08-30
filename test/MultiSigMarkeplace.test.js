@@ -75,7 +75,7 @@ describe("Multisig contract deployment test", function () {
     var deployedMultiSigContract;
     var provider;
     var argsTxSubmitted;
-
+    var txNonce;
     before(async function () {
       var accounts = await ethers.getSigners();
       owner1 = accounts[1];
@@ -123,16 +123,9 @@ describe("Multisig contract deployment test", function () {
         user2.address,
       ]);
 
-      //get last transaction nonce
-      var txCount = await provider.getTransactionCount(
-        deployedMultiSigContract.address
-      );
-      const nonce = txCount + 1;
-
       //prepare tx submission to interact with demo contract
       argsTxSubmitted = {
         _to: deployedDemoContract.address,
-        _nonce: nonce,
         _value: 0,
         _data: payloadFreezeUser,
       };
@@ -142,7 +135,6 @@ describe("Multisig contract deployment test", function () {
           .connect(owner2)
           .submitTx(
             argsTxSubmitted._to,
-            argsTxSubmitted._nonce,
             argsTxSubmitted._value,
             argsTxSubmitted._data
           )
@@ -150,49 +142,31 @@ describe("Multisig contract deployment test", function () {
         .to.emit(deployedMultiSigContract, "TxSubmitted")
         .withArgs(
           owner2.address,
-          argsTxSubmitted._nonce,
+          1,
           argsTxSubmitted._to,
           argsTxSubmitted._value,
           argsTxSubmitted._data
         );
 
+      txNonce = await deployedMultiSigContract.getTransactionCount();
+
       //test if a tx has been successfully created
-      const txCreated = await deployedMultiSigContract.getTransaction(
-        argsTxSubmitted._nonce
-      );
-      assert.equal(txCreated.nonce, argsTxSubmitted._nonce);
+      const txCreated = await deployedMultiSigContract.getTransaction(txNonce);
       assert.equal(txCreated.to, argsTxSubmitted._to);
+      assert.equal(txCreated.nonce.toString(), txNonce.toString());
       assert.equal(txCreated.data, argsTxSubmitted._data);
       assert.equal(txCreated.executed, false);
       assert.equal(txCreated.nbOwnerConfirmationsProcessed, 0);
-
-      //try sending the same transaction again
-      await expect(
-        deployedMultiSigContract
-          .connect(owner2)
-          .submitTx(
-            argsTxSubmitted._to,
-            argsTxSubmitted._nonce,
-            argsTxSubmitted._value,
-            argsTxSubmitted._data
-          )
-      ).to.be.revertedWith("MultiSig__TxAlreadySubmitted");
     });
 
     it("Owner2 confirms a proposal by confirming a tx", async () => {
-      await expect(
-        deployedMultiSigContract
-          .connect(owner2)
-          .confirmTx(argsTxSubmitted._nonce)
-      )
+      await expect(deployedMultiSigContract.connect(owner2).confirmTx(txNonce))
         .to.emit(deployedMultiSigContract, "TxConfirmed")
-        .withArgs(owner2.address, owner2.address, argsTxSubmitted._nonce);
+        .withArgs(owner2.address, owner2.address, txNonce);
 
       //test if tx has been successfully confirmed
-      const tx = await deployedMultiSigContract.getTransaction(
-        argsTxSubmitted._nonce
-      );
-      assert.equal(tx.nonce, argsTxSubmitted._nonce);
+      const tx = await deployedMultiSigContract.getTransaction(txNonce);
+
       assert.equal(tx.to, argsTxSubmitted._to);
       assert.equal(tx.executed, false);
       assert.equal(tx.nbOwnerConfirmationsProcessed, 1);
@@ -200,34 +174,24 @@ describe("Multisig contract deployment test", function () {
 
     it("Owner2 tries to execute proposal tx and should fail as the number of required owners having confirmed has not been reached", async () => {
       await expect(
-        deployedMultiSigContract
-          .connect(owner2)
-          .executeTx(argsTxSubmitted._nonce)
+        deployedMultiSigContract.connect(owner2).executeTx(txNonce)
       ).to.be.revertedWith("MultiSig__TxCannotExecute");
     });
 
     it("Owner3 tries to execute proposal tx and should fail as the number of required owners having confirmed has not been reached", async () => {
       await expect(
-        deployedMultiSigContract
-          .connect(owner3)
-          .executeTx(argsTxSubmitted._nonce)
+        deployedMultiSigContract.connect(owner3).executeTx(txNonce)
       ).to.be.revertedWith("MultiSig__TxCannotExecute");
     });
 
     it("Owner1 also confirms the proposal by confirming a tx", async () => {
-      await expect(
-        deployedMultiSigContract
-          .connect(owner1)
-          .confirmTx(argsTxSubmitted._nonce)
-      )
+      await expect(deployedMultiSigContract.connect(owner1).confirmTx(txNonce))
         .to.emit(deployedMultiSigContract, "TxConfirmed")
-        .withArgs(owner1.address, owner2.address, argsTxSubmitted._nonce);
+        .withArgs(owner1.address, owner2.address, txNonce);
 
       //test if tx has been successfully confirmed
-      const tx = await deployedMultiSigContract.getTransaction(
-        argsTxSubmitted._nonce
-      );
-      assert.equal(tx.nonce, argsTxSubmitted._nonce);
+      const tx = await deployedMultiSigContract.getTransaction(txNonce);
+
       assert.equal(tx.to, argsTxSubmitted._to);
       assert.equal(tx.executed, false);
       assert.equal(tx.nbOwnerConfirmationsProcessed, 2);
@@ -239,19 +203,13 @@ describe("Multisig contract deployment test", function () {
     });
 
     it("Owner1 can execute proposal tx as the number of required owners having confirmed has been reached", async () => {
-      await expect(
-        deployedMultiSigContract
-          .connect(owner1)
-          .executeTx(argsTxSubmitted._nonce)
-      )
+      await expect(deployedMultiSigContract.connect(owner1).executeTx(txNonce))
         .to.emit(deployedMultiSigContract, "TxExecuted")
-        .withArgs(owner1.address, owner2.address, argsTxSubmitted._nonce);
+        .withArgs(owner1.address, owner2.address, txNonce);
 
       //test if tx has been successfully executed
-      const tx = await deployedMultiSigContract.getTransaction(
-        argsTxSubmitted._nonce
-      );
-      assert.equal(tx.nonce, argsTxSubmitted._nonce);
+      const tx = await deployedMultiSigContract.getTransaction(txNonce);
+      assert.equal(tx.nonce.toString(), txNonce.toString());
       assert.equal(tx.to, argsTxSubmitted._to);
       assert.equal(tx.executed, true);
     });
@@ -323,16 +281,9 @@ describe("Multisig contract deployment test", function () {
         "0x06Cfb38C30775505C934A1bA364bfFEDfbFAfE37",
       ]);
 
-      //get last transaction nonce
-      var txCount = await provider.getTransactionCount(
-        deployedMultiSigContract.address
-      );
-      const nonce = txCount + 1;
-
       //prepare tx submission to interact with the multisig contract itself
       argsTxSubmitted = {
         _to: deployedMultiSigContract.address,
-        _nonce: nonce,
         _value: 0,
         _data: payloadAddOwner,
       };
@@ -342,7 +293,6 @@ describe("Multisig contract deployment test", function () {
           .connect(owner2)
           .submitTx(
             argsTxSubmitted._to,
-            argsTxSubmitted._nonce,
             argsTxSubmitted._value,
             argsTxSubmitted._data
           )
@@ -350,7 +300,7 @@ describe("Multisig contract deployment test", function () {
         .to.emit(deployedMultiSigContract, "TxSubmitted")
         .withArgs(
           owner2.address,
-          argsTxSubmitted._nonce,
+          1,
           argsTxSubmitted._to,
           argsTxSubmitted._value,
           argsTxSubmitted._data
@@ -358,34 +308,24 @@ describe("Multisig contract deployment test", function () {
 
       //----------transation sent-----------
 
+      const txNonce = await deployedMultiSigContract.getTransactionCount();
+
       //----------confirmation of owners----------
       //owner2 confirms tx
-      await expect(
-        deployedMultiSigContract
-          .connect(owner2)
-          .confirmTx(argsTxSubmitted._nonce)
-      )
+      await expect(deployedMultiSigContract.connect(owner2).confirmTx(txNonce))
         .to.emit(deployedMultiSigContract, "TxConfirmed")
-        .withArgs(owner2.address, owner2.address, argsTxSubmitted._nonce);
+        .withArgs(owner2.address, owner2.address, txNonce);
 
       //owner3 confirms tx
-      await expect(
-        deployedMultiSigContract
-          .connect(owner3)
-          .confirmTx(argsTxSubmitted._nonce)
-      )
+      await expect(deployedMultiSigContract.connect(owner3).confirmTx(txNonce))
         .to.emit(deployedMultiSigContract, "TxConfirmed")
-        .withArgs(owner3.address, owner2.address, argsTxSubmitted._nonce);
+        .withArgs(owner3.address, owner2.address, txNonce);
       //----------confirmation txs sent-----------
 
       //----------execute tx----------------
-      await expect(
-        deployedMultiSigContract
-          .connect(owner3)
-          .executeTx(argsTxSubmitted._nonce)
-      )
+      await expect(deployedMultiSigContract.connect(owner3).executeTx(txNonce))
         .to.emit(deployedMultiSigContract, "TxExecuted")
-        .withArgs(owner3.address, owner2.address, argsTxSubmitted._nonce);
+        .withArgs(owner3.address, owner2.address, txNonce);
       //----------execute tx sent-----------
 
       //Retrieves all owners from the contract
@@ -413,6 +353,34 @@ describe("Multisig contract deployment test", function () {
         nbOfOwnersNeededForApproval_afterNewOwnerAdded_fromContract.toString(),
         nbOfOwnersNeededForApproval_afterNewOwnerAdded_fromCalculation.toString()
       );
+    });
+
+    it("contract returns a correct number of transactions", async () => {
+      const nbTxToSubmit = 15;
+      //prepare payload
+      var abiFragmentAddOwner = ["function func(uint256 test)"];
+      var iAddOwner = new ethers.utils.Interface(abiFragmentAddOwner);
+      const payloadAddOwner = iAddOwner.encodeFunctionData("func", [
+        "0x06Cfb38C30775505C934A1bA364bfFEDfbFAfE37",
+      ]);
+
+      //prepare tx submission to interact with the multisig contract itself
+      argsTxSubmitted = {
+        _to: deployedMultiSigContract.address,
+        _value: 0,
+        _data: payloadAddOwner,
+      };
+      for (let index = 0; index < nbTxToSubmit; index++) {
+        await deployedMultiSigContract
+          .connect(owner2)
+          .submitTx(
+            argsTxSubmitted._to,
+            argsTxSubmitted._value,
+            argsTxSubmitted._data
+          );
+      }
+      const txCount = await deployedMultiSigContract.getTransactionCount();
+      assert(txCount.toString(), nbTxToSubmit);
     });
   });
 });
