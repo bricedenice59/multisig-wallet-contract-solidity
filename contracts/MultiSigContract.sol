@@ -42,13 +42,10 @@ contract MultiSig {
     event TxExecuted(
         address indexed owner,
         address indexed txOriginOwner,
-        uint indexed nonce
+        uint256 indexed nonce
     );
     event MultiSigOwnerAdded(address indexed owner, uint256 indexed timestamp);
-    event MultiSigOwnerRemoved(
-        address indexed owner,
-        uint256 indexed timestamp
-    );
+    event MultiSigOwnerRemoved(address indexed owner, uint256 indexed timestamp);
 
     uint8 constant MINIMUM_OWNERS_COUNT = 3;
     uint8 constant MAXIMUM_OWNERS_COUNT = 20;
@@ -77,7 +74,7 @@ contract MultiSig {
         uint8 nbOwnerConfirmationsProcessed;
     }
     //store all transactions nonce created by the submitTx function
-    uint256[] s_txNonce;
+    uint256[] private s_txNonce;
 
     // Modifier
     /**
@@ -104,8 +101,7 @@ contract MultiSig {
      * Prevents the confirmation of a non-existing transaction
      */
     modifier txExists(uint256 nonce) {
-        if (s_transactions[nonce].to == address(0))
-            revert MultiSig__TxDoesNotExist();
+        if (s_transactions[nonce].to == address(0)) revert MultiSig__TxDoesNotExist();
         _;
     }
 
@@ -114,8 +110,7 @@ contract MultiSig {
      * Prevents the execution of a transaction that has already been executed
      */
     modifier txNotExecuted(uint256 nonce) {
-        if (s_transactions[nonce].executed)
-            revert MultiSig__TxAlreadyExecuted();
+        if (s_transactions[nonce].executed) revert MultiSig__TxAlreadyExecuted();
         _;
     }
 
@@ -124,8 +119,7 @@ contract MultiSig {
      * Prevents the execution of a transaction that has already been confirmed
      */
     modifier txNotConfirmed(uint256 nonce) {
-        if (hasConfirmed[nonce][msg.sender])
-            revert MultiSig__TxAlreadyConfirmed();
+        if (hasConfirmed[nonce][msg.sender]) revert MultiSig__TxAlreadyConfirmed();
         _;
     }
 
@@ -163,8 +157,7 @@ contract MultiSig {
         uint256 _value,
         bytes calldata _data
     ) external onlyOwner {
-        uint256 _nonce = s_txNonce.length;
-        if (_nonce == 0) _nonce += 1;
+        uint256 _nonce = s_txNonce.length + 1;
 
         s_txNonce.push(_nonce);
         s_transactions[_nonce] = Tx({
@@ -225,8 +218,7 @@ contract MultiSig {
      */
     function addOwner(address newOwner) external onlyThisWallet {
         if (newOwner == address(0)) revert MultiSig__OwnerInvalidAddress();
-        if (s_owners.length == MAXIMUM_OWNERS_COUNT)
-            revert MultiSig__AddOwnerFailed();
+        if (s_owners.length == MAXIMUM_OWNERS_COUNT) revert MultiSig__AddOwnerFailed();
         if (s_isOwner[newOwner]) revert MultiSig__AddOwnerFailed();
 
         s_owners.push(newOwner);
@@ -244,8 +236,7 @@ contract MultiSig {
      */
     function removeOwner(address owner) external onlyThisWallet {
         if (owner == address(0)) revert MultiSig__OwnerInvalidAddress();
-        if (s_owners.length == MINIMUM_OWNERS_COUNT)
-            revert MultiSig__RemoveOwnerFailed();
+        if (s_owners.length == MINIMUM_OWNERS_COUNT) revert MultiSig__RemoveOwnerFailed();
 
         uint256 index = ownersArrayIndexOf(owner);
         ownersArrayRemoveAtIndex(index);
@@ -304,7 +295,7 @@ contract MultiSig {
      * Returns the index of a given address in the owners array
      */
     function ownersArrayIndexOf(address value) private view returns (uint256) {
-        uint i = 0;
+        uint256 i = 0;
         while (s_owners[i] != value) {
             i++;
         }
@@ -314,10 +305,10 @@ contract MultiSig {
     /**
      * Removes a value from the owners array
      */
-    function ownersArrayRemoveAtIndex(uint _index) private {
+    function ownersArrayRemoveAtIndex(uint256 _index) private {
         require(_index < s_owners.length, "index out of bound");
 
-        for (uint i = _index; i < s_owners.length - 1; i++) {
+        for (uint256 i = _index; i < s_owners.length - 1; i++) {
             s_owners[i] = s_owners[i + 1];
         }
         s_owners.pop();
