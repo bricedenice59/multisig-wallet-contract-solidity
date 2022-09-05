@@ -1,6 +1,6 @@
 require("dotenv").config();
 const { network } = require("hardhat");
-const { verify } = require("../../marketplace-utils/utils/verify");
+const { verify } = require("marketplace-shared/lib/contracts/verify/verify");
 
 module.exports = async ({ getNamedAccounts, deployments }) => {
     const { deploy, log } = deployments;

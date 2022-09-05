@@ -2,7 +2,7 @@ const { ethers, network } = require("hardhat");
 const {
     updateContractAddresses,
     updateContractAbis,
-} = require("../../marketplace-utils/utils/updateContractsAbisAndAdresses");
+} = require("marketplace-shared/lib/contracts/update/updateDeploymentsConstants");
 
 const chainId = network.config.chainId.toString();
 module.exports = async function () {
